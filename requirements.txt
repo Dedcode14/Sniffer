@@ -1,3 +1,8 @@
 scapy
+pyqt5
+pyinstaller
 
 pip install scapy
+pip install pyqt5
+pip install pyinstaller
+
