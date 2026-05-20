@@ -1,196 +1,195 @@
-# Importa la función sniff para capturar paquetes de red
+# Importa la función sniff de Scapy para capturar paquetes de red
 from scapy.all import sniff
 
-# Importa la función parse_packet desde el archivo parser
+# Importa la función que disecciona cada paquete por capas
 from parser import parse_packet
 
 
-# Define una función privada para imprimir los datos del paquete
+# Imprime en consola los campos del paquete organizados por capa
 def _imprimir_paquete(datos):
-    # Imprime en consola los campos del diccionario devuelto por parse_packet
 
-    # Verifica si en el diccionario existe información de la capa Ethernet
+    # Verifica si existen datos de la capa Ethernet
     if "ethernet" in datos:
-        # Guarda los datos de ethernet en una variable local
         eth = datos["ethernet"]
-        # Imprime una línea separadora
         print("=" * 50)
-        # Imprime el título de la capa 2
         print("CAPA 2 - ETHERNET")
-        # Imprime otra línea separadora
         print("=" * 50)
-        # Imprime la MAC de origen
-        print(f"  MAC origen  : {eth['mac_origen']}")
-        # Imprime la MAC de destino
-        print(f"  MAC destino : {eth['mac_destino']}")
-        # Imprime el protocolo de la trama Ethernet
-        print(f"  Protocolo   : {eth['protocolo']}")
+        print(f"  PRE  (Preamble)          : {eth['PRE']}")
+        print(f"  SFD  (Start Frame Delim) : {eth['SFD']}")
+        print(f"  DAD  (Dest. Address)     : {eth['DAD']}")
+        print(f"  SAD  (Source Address)    : {eth['SAD']}")
+        print(f"  LNG  (EtherType/Length)  : {eth['LNG']}")
+        print(f"  DATA                     : {eth['DATA']}")
+        print(f"  FCS  (Frame Check Seq.)  : {eth['FCS']}")
+        print(f"  Longitud total           : {eth['longitud']}")
 
-    # Verifica si existe información de IPv4 en el diccionario
+    # Verifica si existen datos de la capa IPv4
     if "ipv4" in datos:
-        # Guarda los datos de IPv4 en una variable
         ip = datos["ipv4"]
-        # Imprime salto de línea + separador
         print("\n" + "=" * 50)
-        # Imprime el título de la capa 3
         print("CAPA 3 - IPv4")
-        # Imprime separador
         print("=" * 50)
-        # Imprime la IP de origen
-        print(f"  IP origen   : {ip['ip_origen']}")
-        # Imprime la IP de destino
-        print(f"  IP destino  : {ip['ip_destino']}")
-        # Imprime el TTL (tiempo de vida del paquete)
-        print(f"  TTL         : {ip['ttl']}")
-        # Imprime el protocolo (TCP, UDP, ICMP, etc.)
-        print(f"  Protocolo   : {ip['protocolo']}")
+        print(f"  VER                      : {ip['VER']}")
+        print(f"  HLEN                     : {ip['HLEN']}")
+        print(f"  DS   (Diff. Services)    : {ip['DS']}")
+        print(f"  TLEN (Total Length)      : {ip['TLEN']}")
+        print(f"  Identification           : {ip['Identification']}")
+        print(f"  Flags                    : {ip['Flags']}")
+        print(f"  Fragmentation Offset     : {ip['Fragmentation Offset']}")
+        print(f"  TTL                      : {ip['TTL']}")
+        print(f"  Protocol                 : {ip['Protocol']}")
+        print(f"  Checksum                 : {ip['Checksum']}")
+        print(f"  Source IP Address        : {ip['Source IP Address']}")
+        print(f"  Destination IP Address   : {ip['Destination IP Address']}")
+        print(f"  Options                  : {ip['Options']}")
 
-    # Verifica si existe información de TCP
-    if "tcp" in datos:
-        # Guarda los datos TCP en una variable
-        tcp = datos["tcp"]
-        # Imprime salto de línea + separador
+    # Verifica si existen datos ARP
+    if "arp" in datos:
+        arp = datos["arp"]
         print("\n" + "=" * 50)
-        # Imprime el título de la capa 4 (TCP)
-        print("CAPA 4 - TCP")
-        # Imprime separador
+        print("CAPA 3 - ARP")
         print("=" * 50)
-        # Imprime el puerto de origen
+        print(f"  Operación    : {arp['operacion']}")
+        print(f"  MAC Origen   : {arp['mac_origen']}")
+        print(f"  IP Origen    : {arp['ip_origen']}")
+        print(f"  MAC Destino  : {arp['mac_destino']}")
+        print(f"  IP Destino   : {arp['ip_destino']}")
+
+    # Verifica si el protocolo de transporte es TCP
+    if "tcp" in datos:
+        tcp = datos["tcp"]
+        print("\n" + "=" * 50)
+        print("CAPA 4 - TCP")
+        print("=" * 50)
         print(f"  Puerto origen  : {tcp['puerto_origen']}")
-        # Imprime el puerto de destino
         print(f"  Puerto destino : {tcp['puerto_destino']}")
-        # Imprime el número de secuencia
         print(f"  Secuencia      : {tcp['secuencia']}")
-        # Imprime el número de acuse (ACK)
         print(f"  Acuse (ACK)    : {tcp['ack']}")
-        # Imprime los flags del paquete TCP
         print(f"  Flags          : {tcp['flags']}")
 
     # Si no es TCP, verifica si es UDP
     elif "udp" in datos:
-        # Guarda los datos UDP
         udp = datos["udp"]
-        # Imprime salto de línea + separador
         print("\n" + "=" * 50)
-        # Imprime el título UDP
         print("CAPA 4 - UDP")
-        # Imprime separador
         print("=" * 50)
-        # Imprime puerto de origen
         print(f"  Puerto origen  : {udp['puerto_origen']}")
-        # Imprime puerto de destino
         print(f"  Puerto destino : {udp['puerto_destino']}")
-        # Imprime la longitud del segmento UDP
         print(f"  Longitud       : {udp['longitud']}")
 
     # Si no es UDP, verifica si es ICMP
     elif "icmp" in datos:
-        # Guarda los datos ICMP
         icmp = datos["icmp"]
-        # Imprime salto de línea + separador
         print("\n" + "=" * 50)
-        # Imprime título ICMP (capa intermedia)
         print("CAPA 3.5 - ICMP")
-        # Imprime separador
         print("=" * 50)
-        # Imprime el tipo de mensaje ICMP
         print(f"  Tipo   : {icmp['tipo']}")
-        # Imprime el código ICMP
         print(f"  Código : {icmp['codigo']}")
 
-    # Verifica si existe payload (datos)
+    # Verifica si existe payload y lo muestra en hexadecimal
     if "payload" in datos:
-        # Imprime salto de línea + separador
         print("\n" + "=" * 50)
-        # Imprime título del payload
         print("PAYLOAD (primeros 32 bytes en hex)")
-        # Imprime separador
         print("=" * 50)
-        # Imprime el contenido del payload en hexadecimal
         print(f"  {datos['payload']}")
 
-    # Imprime un salto de línea final
+    # Salto de línea al final del paquete
     print()
 
 
-# Función para capturar un solo paquete
+# Captura exactamente un paquete y muestra su detalle en consola
 def capturar_uno():
-    # Captura un solo paquete y lo imprime
-
-    # Mensaje indicando que se está esperando un paquete
     print("Esperando un paquete...\n")
 
-    # Define una función interna que será llamada cuando llegue un paquete
+    # Función interna que se ejecuta cuando llega el paquete
     def callback(paquete):
-        # Procesa el paquete con la función parse_packet
-        datos = parse_packet(paquete)
-        # Imprime los datos ya procesados
-        _imprimir_paquete(datos)
+        datos = parse_packet(paquete)  # disecciona el paquete
+        if not datos:  # descarta paquetes no soportados como IPv6
+            return
+        _imprimir_paquete(datos)  # imprime los campos en consola
 
-    # Inicia la captura de paquetes:
-    # count=1 → captura solo 1 paquete
-    # prn=callback → cada paquete capturado ejecuta la función callback
+    # count=1 captura solo un paquete y llama a callback al recibirlo
     sniff(count=1, prn=callback)
 
 
-paquetes_capturados = []  # lista compartida entre funciones
+# Lista global que almacena todos los paquetes capturados en modo continuo
+paquetes_capturados = []
 
 
+# Función interna que se ejecuta por cada paquete durante la captura continua
 def _callback_continuo(paquete):
-    datos = parse_packet(paquete)
-    paquetes_capturados.append(datos)
-    num = len(paquetes_capturados)
+    datos = parse_packet(paquete)  # disecciona el paquete
+    if not datos:  # descarta paquetes no soportados como IPv6
+        return
+    paquetes_capturados.append(datos)  # agrega el paquete a la lista global
+    num = len(paquetes_capturados)  # número de paquetes capturados hasta ahora
 
-    # Resumen de una línea por paquete
+    # Obtiene el protocolo detectado por parser, o muestra ??? si no se reconoce
+    proto = datos.get("tipo_protocolo", "???")
+
+    # Obtiene las IPs de origen y destino del datagrama IPv4 si existe
     ip = datos.get("ipv4", {})
-    proto = (
-        "TCP"
-        if "tcp" in datos
-        else "UDP" if "udp" in datos else "ICMP" if "icmp" in datos else "???"
-    )
-    src = ip.get("ip_origen", "?")
-    dst = ip.get("ip_destino", "?")
+    src = ip.get("Source IP Address", "?")
+    dst = ip.get("Destination IP Address", "?")
 
-    print(f"  [{num:>3}]  {proto:<5}  {src:<16}  ->  {dst}")
+    # Para ARP usa las IPs del propio ARP ya que no tiene capa IPv4
+    if "arp" in datos:
+        src = datos["arp"]["ip_origen"]
+        dst = datos["arp"]["ip_destino"]
+
+    # Imprime una línea de resumen por paquete
+    print(f"  [{num:>3}]  {proto:<12}  {src:<16}  ->  {dst}")
 
 
+# Inicia la captura continua de paquetes hasta que el usuario presione Ctrl+C
 def capturar_continuo():
-    # Captura paquetes sin límite hasta Ctrl+C
     global paquetes_capturados
-    paquetes_capturados = []
+    paquetes_capturados = []  # reinicia la lista al iniciar una nueva captura
 
     print("Captura continua iniciada. Presiona Ctrl+C para detener.\n")
-    print(f"  {'#':>3}   {'Protocolo':<5}  {'IP Origen':<16}       IP Destino")
-    print("  " + "-" * 50)
+    print(f"  {'#':>3}   {'Protocolo':<12}  {'IP Origen':<16}       IP Destino")
+    print("  " + "-" * 55)
 
     try:
+        # Captura paquetes sin límite y llama a _callback_continuo por cada uno
         sniff(prn=_callback_continuo, store=False)
     except KeyboardInterrupt:
+        # El usuario presionó Ctrl+C, muestra el total capturado
         print(f"\nCaptura detenida. Paquetes capturados: {len(paquetes_capturados)}")
 
+    # Después de detener ofrece al usuario seleccionar un paquete para análisis
     seleccionar_paquete()
 
 
+# Permite al usuario elegir un paquete de la lista y ver su detalle completo
 def seleccionar_paquete():
-    # pide al usuario elegir un paquete y muestra su detalle
+    # Si no hay paquetes capturados termina la función
     if not paquetes_capturados:
         print("No hay paquetes capturados.")
         return
 
     while True:
         try:
+            # Solicita al usuario el número del paquete que desea analizar
             entrada = input(
-                f"\nIngresa el número del paquete a analizar (1-{len(paquetes_capturados)}), o 0 para salir: "
+                f"\nIngresa el número del paquete a analizar "
+                f"(1-{len(paquetes_capturados)}), o 0 para salir: "
             )
-            num = int(entrada)
-            if num == 0:
+            num = int(entrada)  # convierte la entrada a entero
+
+            if num == 0:  # el usuario elige salir
                 break
+
             if 1 <= num <= len(paquetes_capturados):
+                # Muestra el detalle del paquete seleccionado
                 print(f"\nDetalle del paquete #{num}")
                 _imprimir_paquete(paquetes_capturados[num - 1])
             else:
+                # El número ingresado está fuera del rango válido
                 print(
                     f"Número fuera de rango. Elige entre 1 y {len(paquetes_capturados)}."
                 )
+
         except ValueError:
+            # El usuario ingresó algo que no es un número
             print("Ingresa un número válido.")
