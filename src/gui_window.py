@@ -23,6 +23,7 @@ from PyQt5.QtGui import QFont, QColor  # fuente y color para celdas de la tabla
 from scapy.all import sniff  # función de captura de paquetes
 from parser import parse_packet  # función que disecciona cada paquete
 from gui_styles import STYLE, PROTO_COLORS  # estilos CSS y colores por protocolo
+from network_info import get_network_info   # información de red del dispositivo
 
 
 # Clase auxiliar para emitir señales entre el hilo de captura y la interfaz gráfica
@@ -59,6 +60,7 @@ class SnifferWindow(QMainWindow):
         layout.addLayout(
             self._build_top_bar()
         )  # agrega la barra superior con título y botones
+        layout.addWidget(self._build_network_info_bar())  # agrega la barra de info de red
         layout.addWidget(self._build_status_label())  # agrega la etiqueta de estado
         layout.addLayout(self._build_filtro())  # agrega el filtro de protocolo
         layout.addWidget(self._build_separator())  # agrega la línea separadora
@@ -94,7 +96,74 @@ class SnifferWindow(QMainWindow):
 
         return top
 
-    # Construye la etiqueta que muestra el estado actual de la captura
+    # Construye la barra de información de red del dispositivo (SSID, MAC, IP local)
+    def _build_network_info_bar(self):
+        info = get_network_info()  # obtiene los datos de red al arrancar la ventana
+
+        bar = QWidget()  # contenedor principal de la barra de información
+        bar.setObjectName("network_info_bar")  # nombre para aplicar estilo CSS
+        layout = QHBoxLayout(bar)  # layout horizontal para alinear los campos en fila
+        layout.setContentsMargins(10, 6, 10, 6)  # márgenes internos de la barra
+        layout.setSpacing(24)  # espacio horizontal entre cada campo de información
+
+        # Función auxiliar interna que construye un par etiqueta + valor para cada campo
+        def _campo(etiqueta, valor, color="#cdd6f4"):
+            h = QHBoxLayout()  # layout horizontal que agrupa la etiqueta y su valor
+            h.setSpacing(6)  # espacio entre la etiqueta descriptiva y el valor
+            lbl = QLabel(etiqueta)  # etiqueta fija con el nombre del campo (ej. "IP local:")
+            lbl.setObjectName("net_info_label")  # nombre para aplicar estilo CSS gris apagado
+            val = QLabel(valor)  # etiqueta dinámica que muestra el valor actual del campo
+            val.setObjectName("net_info_value")  # nombre para aplicar estilo CSS al valor
+            val.setStyleSheet(f"color: {color}; font-weight: bold;")  # color único por campo y negrita
+            h.addWidget(lbl)  # agrega la etiqueta fija al layout del campo
+            h.addWidget(val)  # agrega el valor dinámico al layout del campo
+            return h, val  # devuelve también el QLabel del valor para poder actualizarlo después
+
+        # Crea el campo SSID con color verde y guarda referencia al QLabel para actualizarlo
+        h_ssid, self.val_ssid = _campo(
+            "📶  Red (SSID):", info["ssid"], "#a6e3a1"
+        )
+        # Crea el campo MAC con color azul y guarda referencia al QLabel para actualizarlo
+        h_mac, self.val_mac = _campo(
+            "🔌  MAC salida:", info["mac"], "#89b4fa"
+        )
+        # Crea el campo IP local con color amarillo y guarda referencia al QLabel para actualizarlo
+        h_ip, self.val_ip = _campo(
+            "🖥️  IP local:", info["ip_local"], "#f9e2af"
+        )
+        # Crea el campo Interfaz con color morado y guarda referencia al QLabel para actualizarlo
+        h_iface, self.val_iface = _campo(
+            "📡  Interfaz:", info["interfaz"], "#cba6f7"
+        )
+
+        # Agrega los cuatro campos al layout principal de la barra en orden
+        for h in (h_ssid, h_mac, h_ip, h_iface):
+            layout.addLayout(h)
+
+        layout.addStretch()  # espacio flexible que empuja el botón Refrescar hacia la derecha
+
+        # Botón para refrescar la información de red manualmente
+        btn_refresh = QPushButton("⟳  Refrescar")  # botón con ícono de recarga
+        btn_refresh.setFixedWidth(110)  # ancho fijo para que no se estire con el layout
+        btn_refresh.clicked.connect(self._refrescar_network_info)  # conecta el clic al método de refresco
+        layout.addWidget(btn_refresh)  # agrega el botón al extremo derecho de la barra
+
+        # Aplica un fondo ligeramente diferente para distinguir la barra
+        bar.setStyleSheet(
+            "#network_info_bar { background-color: #181825; border-radius: 6px; }"  # fondo oscuro con bordes redondeados
+            "QLabel#net_info_label { color: #6c7086; font-size: 12px; }"            # etiquetas fijas en gris apagado
+            "QLabel#net_info_value { font-size: 12px; }"                             # valores con tamaño de fuente uniforme
+        )
+
+        return bar  # devuelve el widget completo de la barra para agregarlo al layout principal
+
+    # Refresca los valores de SSID, MAC e IP consultando el sistema nuevamente
+    def _refrescar_network_info(self):
+        info = get_network_info()  # vuelve a consultar toda la información de red del sistema
+        self.val_ssid.setText(info["ssid"])      # actualiza el texto del campo SSID en pantalla
+        self.val_mac.setText(info["mac"])        # actualiza el texto del campo MAC en pantalla
+        self.val_ip.setText(info["ip_local"])    # actualiza el texto del campo IP local en pantalla
+        self.val_iface.setText(info["interfaz"]) # actualiza el texto del campo Interfaz en pantalla
     def _build_status_label(self):
         self.label_status = QLabel("Listo.")  # texto inicial
         self.label_status.setObjectName(
